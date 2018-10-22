@@ -1,5 +1,5 @@
 /*
-Copyright 2016 The Kubernetes Authors All rights reserved.
+Copyright The Helm Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -24,6 +24,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/ghodss/yaml"
 
@@ -53,7 +54,7 @@ func SaveDir(c *chart.Chart, dest string) error {
 		}
 	}
 
-	for _, d := range []string{TemplatesDir, ChartsDir} {
+	for _, d := range []string{TemplatesDir, ChartsDir, TemplatesTestsDir} {
 		if err := os.MkdirAll(filepath.Join(outdir, d), 0755); err != nil {
 			return err
 		}
@@ -205,9 +206,10 @@ func writeTarContents(out *tar.Writer, c *chart.Chart, prefix string) error {
 func writeToTar(out *tar.Writer, name string, body []byte) error {
 	// TODO: Do we need to create dummy parent directory names if none exist?
 	h := &tar.Header{
-		Name: name,
-		Mode: 0755,
-		Size: int64(len(body)),
+		Name:    filepath.ToSlash(name),
+		Mode:    0755,
+		Size:    int64(len(body)),
+		ModTime: time.Now(),
 	}
 	if err := out.WriteHeader(h); err != nil {
 		return err

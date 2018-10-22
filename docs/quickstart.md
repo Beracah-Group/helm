@@ -43,7 +43,7 @@ to [configure a service account and rules](rbac.md) before proceeding.
 ## Install Helm
 
 Download a binary release of the Helm client. You can use tools like
-`homebrew`, or look at [the official releases page](https://github.com/kubernetes/helm/releases).
+`homebrew`, or look at [the official releases page](https://github.com/helm/helm/releases).
 
 For more details, or for other options, see [the installation
 guide](install.md).
@@ -65,7 +65,7 @@ This will install Tiller into the Kubernetes cluster you saw with
 
 **TIP:** When you want to upgrade Tiller, just run `helm init --upgrade`.
 
-By default, when Tiller is installed,it does not have authentication enabled.
+By default, when Tiller is installed, it does not have authentication enabled.
 To learn more about configuring strong TLS authentication for Tiller, consult
 [the Tiller TLS guide](tiller_ssl.md).
 
