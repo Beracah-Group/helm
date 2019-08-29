@@ -63,7 +63,7 @@ data:
   dessert: cake
 ```
 
-## Overriding Values from a Parent Chart
+## Overriding Values of a Child Chart
 
 Our original chart, `mychart` is now the _parent_ chart of `mysubchart`. This relationship is based entirely on the fact that `mysubchart` is within `mychart/charts`.
 
@@ -124,7 +124,7 @@ global:
   salad: caesar
 ```
 
-Because of the way globals work, both `mychart/templates/configmap.yaml` and `mysubchart/templates/configmap.yaml` should be able to access that value as `{{ .Values.global.salad}}`.
+Because of the way globals work, both `mychart/templates/configmap.yaml` and `mychart/charts/mysubchart/templates/configmap.yaml` should be able to access that value as `{{ .Values.global.salad}}`.
 
 `mychart/templates/configmap.yaml`:
 
@@ -137,7 +137,7 @@ data:
   salad: {{ .Values.global.salad }}
 ```
 
-`mysubchart/templates/configmap.yaml`:
+`mychart/charts/mysubchart/templates/configmap.yaml`:
 
 ```yaml
 apiVersion: v1

@@ -1,4 +1,4 @@
-# Using Helm
+﻿# Using Helm
 
 This guide explains the basics of using Helm (and Tiller) to manage
 packages on your Kubernetes cluster. It assumes that you have already
@@ -17,9 +17,9 @@ cluster. Think of it like the Kubernetes equivalent of a Homebrew formula,
 an Apt dpkg, or a Yum RPM file.
 
 A *Repository* is the place where charts can be collected and shared.
-It's like Perl's [CPAN archive](http://www.cpan.org) or the
-[Fedora Package Database](https://admin.fedoraproject.org/pkgdb/), but for
-Kubernetes packages.
+It's like Perl's [CPAN archive](https://www.cpan.org) or the
+[Fedora Package Database](https://apps.fedoraproject.org/packages/s/pkgdb), but
+for Kubernetes packages.
 
 A *Release* is an instance of a chart running in a Kubernetes cluster.
 One chart can often be installed many times into the same cluster. And
@@ -63,7 +63,7 @@ stable/mysql  	0.1.0  	Chart for MySQL
 stable/mariadb	0.5.1  	Chart for MariaDB
 ```
 
-Now you will only see the results that match your filter. 
+Now you will only see the results that match your filter.
 
 Why is
 `mariadb` in the list? Because its package description relates it to
@@ -190,7 +190,7 @@ imageTag: 10.1.14-r3
 
 ## Specify a imagePullPolicy
 ## Default to 'Always' if imageTag is 'latest', else set to 'IfNotPresent'
-## ref: http://kubernetes.io/docs/user-guide/images/#pre-pulling-images
+## ref: https://kubernetes.io/docs/user-guide/images/#pre-pulling-images
 ##
 # imagePullPolicy:
 
@@ -215,7 +215,10 @@ You can then override any of these settings in a YAML formatted file,
 and then pass that file during installation.
 
 ```console
-$ echo '{mariadbUser: user0, mariadbDatabase: user0db}' > config.yaml
+$ cat << EOF > config.yaml
+mariadbUser: user0
+mariadbDatabase: user0db
+EOF
 $ helm install -f config.yaml stable/mariadb
 ```
 
@@ -231,7 +234,7 @@ There are two ways to pass configuration data during install:
 
 If both are used, `--set` values are merged into `--values` with higher precedence.
 Overrides specified with `--set` are persisted in a configmap. Values that have been
-`--set` can be viewed for a given release with `helm get values <release-name>`. 
+`--set` can be viewed for a given release with `helm get values <release-name>`.
 Values that have been `--set` can be cleared by running `helm upgrade` with `--reset-values`
 specified.
 
@@ -356,7 +359,7 @@ update things that have changed since the last release.
 ```console
 $ helm upgrade -f panda.yaml happy-panda stable/mariadb
 Fetched stable/mariadb-0.3.0.tgz to /Users/mattbutcher/Code/Go/src/k8s.io/helm/mariadb-0.3.0.tgz
-happy-panda has been upgraded. Happy Helming!
+happy-panda has been upgraded.
 Last Deployed: Wed Sep 28 12:47:54 2016
 Namespace: default
 Status: DEPLOYED
@@ -405,11 +408,11 @@ is not a full list of cli flags. To see a description of all flags, just run
   This defaults to 300 (5 minutes)
 - `--wait`: Waits until all Pods are in a ready state, PVCs are bound, Deployments
   have minimum (`Desired` minus `maxUnavailable`) Pods in ready state and
-  Services have an IP address (and Ingress if a `LoadBalancer`) before 
-  marking the release as successful. It will wait for as long as the 
-  `--timeout` value. If timeout is reached, the release will be marked as 
-  `FAILED`. Note: In scenario where Deployment has `replicas` set to 1 and 
-  `maxUnavailable` is not set to 0 as part of rolling update strategy, 
+  Services have an IP address (and Ingress if a `LoadBalancer`) before
+  marking the release as successful. It will wait for as long as the
+  `--timeout` value. If timeout is reached, the release will be marked as
+  `FAILED`. Note: In scenario where Deployment has `replicas` set to 1 and
+  `maxUnavailable` is not set to 0 as part of rolling update strategy,
   `--wait` will return as ready as it has satisfied the minimum Pod in ready condition.
 - `--no-hooks`: This skips running hooks for the command
 - `--recreate-pods` (only available for `upgrade` and `rollback`): This flag
@@ -518,8 +521,8 @@ $ helm install ./deis-workflow-0.1.0.tgz
 Charts that are archived can be loaded into chart repositories. See the
 documentation for your chart repository server to learn how to upload.
 
-Note: The `stable` repository is managed on the [Kubernetes Charts
-GitHub repository](https://github.com/kubernetes/charts). That project
+Note: The `stable` repository is managed on the [Helm Charts
+GitHub repository](https://github.com/helm/charts). That project
 accepts chart source code, and (after audit) packages those for you.
 
 ## Tiller, Namespaces and RBAC

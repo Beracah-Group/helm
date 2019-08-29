@@ -18,7 +18,6 @@ package tiller
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"log"
 	"strings"
@@ -59,14 +58,26 @@ func (m *LocalReleaseModule) Create(r *release.Release, req *services.InstallRel
 func (m *LocalReleaseModule) Update(current, target *release.Release, req *services.UpdateReleaseRequest, env *environment.Environment) error {
 	c := bytes.NewBufferString(current.Manifest)
 	t := bytes.NewBufferString(target.Manifest)
-	return env.KubeClient.Update(target.Namespace, c, t, req.Force, req.Recreate, req.Timeout, req.Wait)
+	return env.KubeClient.UpdateWithOptions(target.Namespace, c, t, kube.UpdateOptions{
+		Force:         req.Force,
+		Recreate:      req.Recreate,
+		Timeout:       req.Timeout,
+		ShouldWait:    req.Wait,
+		CleanupOnFail: req.CleanupOnFail,
+	})
 }
 
 // Rollback performs a rollback from current to target release
 func (m *LocalReleaseModule) Rollback(current, target *release.Release, req *services.RollbackReleaseRequest, env *environment.Environment) error {
 	c := bytes.NewBufferString(current.Manifest)
 	t := bytes.NewBufferString(target.Manifest)
-	return env.KubeClient.Update(target.Namespace, c, t, req.Force, req.Recreate, req.Timeout, req.Wait)
+	return env.KubeClient.UpdateWithOptions(target.Namespace, c, t, kube.UpdateOptions{
+		Force:         req.Force,
+		Recreate:      req.Recreate,
+		Timeout:       req.Timeout,
+		ShouldWait:    req.Wait,
+		CleanupOnFail: req.CleanupOnFail,
+	})
 }
 
 // Status returns kubectl-like formatted status of release objects
@@ -174,7 +185,11 @@ func DeleteRelease(rel *release.Release, vs chartutil.VersionSet, kubeClient env
 			log.Printf("uninstall: Failed deletion of %q: %s", rel.Name, err)
 			if err == kube.ErrNoObjectsVisited {
 				// Rewrite the message from "no objects visited"
-				err = errors.New("object not found, skipping delete")
+				obj := ""
+				if file.Head != nil && file.Head.Metadata != nil {
+					obj = "[" + file.Head.Kind + "] " + file.Head.Metadata.Name
+				}
+				err = fmt.Errorf("release %q: object %q not found, skipping delete", rel.Name, obj)
 			}
 			errs = append(errs, err)
 		}

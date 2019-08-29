@@ -85,6 +85,11 @@ func TestParseSet(t *testing.T) {
 			expect: map[string]interface{}{"is_null": "null"},
 			err:    false,
 		},
+		{
+			str:    "zero=0",
+			expect: map[string]interface{}{"zero": "0"},
+			err:    false,
+		},
 	}
 	tests := []struct {
 		str    string
@@ -122,6 +127,10 @@ func TestParseSet(t *testing.T) {
 		{
 			str:    "leading_zeros=00009",
 			expect: map[string]interface{}{"leading_zeros": "00009"},
+		},
+		{
+			str:    "zero_int=0",
+			expect: map[string]interface{}{"zero_int": 0},
 		},
 		{
 			str:    "long_int=1234567890",
@@ -293,6 +302,30 @@ func TestParseSet(t *testing.T) {
 		{
 			str:    "nested[1][1]=1",
 			expect: map[string]interface{}{"nested": []interface{}{nil, []interface{}{nil, 1}}},
+		},
+		{
+			str: "name1.name2[0].foo=bar,name1.name2[1].foo=bar",
+			expect: map[string]interface{}{
+				"name1": map[string]interface{}{
+					"name2": []map[string]interface{}{{"foo": "bar"}, {"foo": "bar"}},
+				},
+			},
+		},
+		{
+			str: "name1.name2[1].foo=bar,name1.name2[0].foo=bar",
+			expect: map[string]interface{}{
+				"name1": map[string]interface{}{
+					"name2": []map[string]interface{}{{"foo": "bar"}, {"foo": "bar"}},
+				},
+			},
+		},
+		{
+			str: "name1.name2[1].foo=bar",
+			expect: map[string]interface{}{
+				"name1": map[string]interface{}{
+					"name2": []map[string]interface{}{nil, {"foo": "bar"}},
+				},
+			},
 		},
 	}
 

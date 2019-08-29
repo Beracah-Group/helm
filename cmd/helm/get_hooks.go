@@ -45,7 +45,7 @@ func newGetHooksCmd(client helm.Interface, out io.Writer) *cobra.Command {
 	}
 	cmd := &cobra.Command{
 		Use:     "hooks [flags] RELEASE_NAME",
-		Short:   "download all hooks for a named release",
+		Short:   "Download all hooks for a named release",
 		Long:    getHooksHelp,
 		PreRunE: func(_ *cobra.Command, _ []string) error { return setupConnection() },
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -59,7 +59,7 @@ func newGetHooksCmd(client helm.Interface, out io.Writer) *cobra.Command {
 	}
 	f := cmd.Flags()
 	settings.AddFlagsTLS(f)
-	f.Int32Var(&ghc.version, "revision", 0, "get the named release with revision")
+	f.Int32Var(&ghc.version, "revision", 0, "Get the named release with revision")
 
 	// set defaults from environment
 	settings.InitTLS(f)
@@ -75,7 +75,7 @@ func (g *getHooksCmd) run() error {
 	}
 
 	for _, hook := range res.Release.Hooks {
-		fmt.Fprintf(g.out, "---\n# %s\n%s", hook.Name, hook.Manifest)
+		fmt.Fprintf(g.out, "---\n# %s\n%s\n", hook.Name, hook.Manifest)
 	}
 	return nil
 }

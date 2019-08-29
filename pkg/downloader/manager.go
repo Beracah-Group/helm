@@ -357,7 +357,7 @@ func (m *Manager) hasAllRepos(deps []*chartutil.Dependency) error {
 	return nil
 }
 
-// getRepoNames returns the repo names of the referenced deps which can be used to fetch the cahced index file.
+// getRepoNames returns the repo names of the referenced deps which can be used to fetch the cached index file.
 func (m *Manager) getRepoNames(deps []*chartutil.Dependency) (map[string]string, error) {
 	rf, err := repo.LoadRepositoriesFile(m.HelmHome.RepositoryFile())
 	if err != nil {
@@ -371,6 +371,9 @@ func (m *Manager) getRepoNames(deps []*chartutil.Dependency) (map[string]string,
 	// by Helm.
 	missing := []string{}
 	for _, dd := range deps {
+		if dd.Repository == "" {
+			return nil, fmt.Errorf("no 'repository' field specified for dependency: %q", dd.Name)
+		}
 		// if dep chart is from local path, verify the path is valid
 		if strings.HasPrefix(dd.Repository, "file://") {
 			if _, err := resolver.GetLocalPath(dd.Repository, m.ChartPath); err != nil {
@@ -404,24 +407,22 @@ func (m *Manager) getRepoNames(deps []*chartutil.Dependency) (map[string]string,
 		}
 	}
 	if len(missing) > 0 {
-		if len(missing) > 0 {
-			errorMessage := fmt.Sprintf("no repository definition for %s. Please add them via 'helm repo add'", strings.Join(missing, ", "))
-			// It is common for people to try to enter "stable" as a repository instead of the actual URL.
-			// For this case, let's give them a suggestion.
-			containsNonURL := false
-			for _, repo := range missing {
-				if !strings.Contains(repo, "//") && !strings.HasPrefix(repo, "@") && !strings.HasPrefix(repo, "alias:") {
-					containsNonURL = true
-				}
+		errorMessage := fmt.Sprintf("no repository definition for %s. Please add them via 'helm repo add'", strings.Join(missing, ", "))
+		// It is common for people to try to enter "stable" as a repository instead of the actual URL.
+		// For this case, let's give them a suggestion.
+		containsNonURL := false
+		for _, repo := range missing {
+			if !strings.Contains(repo, "//") && !strings.HasPrefix(repo, "@") && !strings.HasPrefix(repo, "alias:") {
+				containsNonURL = true
 			}
-			if containsNonURL {
-				errorMessage += `
+		}
+		if containsNonURL {
+			errorMessage += `
 Note that repositories must be URLs or aliases. For example, to refer to the stable
 repository, use "https://kubernetes-charts.storage.googleapis.com/" or "@stable" instead of
 "stable". Don't forget to add the repo, too ('helm repo add').`
-			}
-			return nil, errors.New(errorMessage)
 		}
+		return nil, errors.New(errorMessage)
 	}
 	return reposMap, nil
 }
@@ -462,7 +463,7 @@ func (m *Manager) parallelRepoUpdate(repos []*repo.Entry) error {
 		}(r)
 	}
 	wg.Wait()
-	fmt.Fprintln(out, "Update Complete. ⎈Happy Helming!⎈")
+	fmt.Fprintln(out, "Update Complete.")
 	return nil
 }
 
@@ -601,7 +602,7 @@ func writeLock(chartpath string, lock *chartutil.RequirementsLock) error {
 	return ioutil.WriteFile(dest, data, 0644)
 }
 
-// archive a dep chart from local directory and save it into charts/
+// tarFromLocalDir archive a dep chart from local directory and save it into charts/
 func tarFromLocalDir(chartpath string, name string, repo string, version string) (string, error) {
 	destPath := filepath.Join(chartpath, "charts")
 

@@ -15,6 +15,9 @@ limitations under the License.
 package chartutil
 
 import (
+	"encoding/json"
+	"os"
+	"path/filepath"
 	"sort"
 	"testing"
 
@@ -300,6 +303,10 @@ func verifyRequirementsImportValues(t *testing.T, c *chart.Chart, v *chart.Confi
 		}
 
 		switch pv.(type) {
+		case json.Number:
+			if s := pv.(json.Number).String(); s != vv {
+				t.Errorf("Failed to match imported number value %v with expected %v", s, vv)
+			}
 		case float64:
 			s := strconv.FormatFloat(pv.(float64), 'f', -1, 64)
 			if s != vv {
@@ -426,7 +433,12 @@ func TestDependentChartWithSubChartsHelmignore(t *testing.T) {
 }
 
 func TestDependentChartsWithSubChartsSymlink(t *testing.T) {
-	c, err := Load("testdata/joonix")
+	joonix := "testdata/joonix"
+	if err := os.Symlink(filepath.Join("..", "..", "frobnitz"), filepath.Join(joonix, "charts", "frobnitz")); err != nil {
+		t.Fatal(err)
+	}
+	defer os.RemoveAll(filepath.Join(joonix, "charts", "frobnitz"))
+	c, err := Load(joonix)
 	if err != nil {
 		t.Fatalf("Failed to load testdata: %s", err)
 	}

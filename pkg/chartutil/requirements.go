@@ -85,7 +85,7 @@ type Requirements struct {
 //
 // It represents the state that the dependencies should be in.
 type RequirementsLock struct {
-	// Genderated is the date the lock file was last generated.
+	// Generated is the date the lock file was last generated.
 	Generated time.Time `json:"generated"`
 	// Digest is a hash of the requirements file used to generate it.
 	Digest string `json:"digest"`
@@ -391,7 +391,7 @@ func processImportValues(c *chart.Chart) error {
 	if err != nil {
 		return err
 	}
-	b := make(map[string]interface{}, 0)
+	b := cvals.AsMap()
 	// import values from each dependency if specified in import-values
 	for _, r := range reqs.Dependencies {
 		// only process raw requirement that is found in chart's dependencies (enabled)
@@ -428,7 +428,7 @@ func processImportValues(c *chart.Chart) error {
 					}
 					// create value map from child to be merged into parent
 					vm := pathToMap(nm["parent"], vv.AsMap())
-					b = coalesceTables(cvals, vm)
+					b = coalesceTables(b, vm, c.Metadata.Name)
 				case string:
 					nm := map[string]string{
 						"child":  "exports." + iv,
@@ -441,14 +441,13 @@ func processImportValues(c *chart.Chart) error {
 						log.Printf("Warning: ImportValues missing table: %v", err)
 						continue
 					}
-					b = coalesceTables(b, vm.AsMap())
+					b = coalesceTables(b, vm.AsMap(), c.Metadata.Name)
 				}
 			}
 			// set our formatted import values
 			r.ImportValues = outiv
 		}
 	}
-	b = coalesceTables(b, cvals)
 	y, err := yaml.Marshal(b)
 	if err != nil {
 		return err

@@ -150,7 +150,10 @@ func TestUninstallReleaseWithKeepPolicy(t *testing.T) {
 	if res.Info == "" {
 		t.Errorf("Expected response info to not be empty")
 	} else {
-		if !strings.Contains(res.Info, "[ConfigMap] test-cm-keep") {
+		if !strings.Contains(res.Info, "[ConfigMap] test-cm-keep-a") {
+			t.Errorf("unexpected output: %s", res.Info)
+		}
+		if !strings.Contains(res.Info, "[ConfigMap] test-cm-keep-b") {
 			t.Errorf("unexpected output: %s", res.Info)
 		}
 	}
@@ -195,5 +198,33 @@ func TestUninstallReleaseCustomDescription(t *testing.T) {
 
 	if res.Release.Info.Description != customDescription {
 		t.Errorf("Expected description to be %q, got %q", customDescription, res.Release.Info.Description)
+	}
+}
+
+func TestUninstallReleaseObjectNotFoundError(t *testing.T) {
+	c := helm.NewContext()
+	rs := rsFixture()
+	rel := releaseStub()
+	manifest := `kind: ConfigMap
+metadata:
+  name: configmap-foo
+data:
+  name: value
+`
+
+	rel.Manifest = manifest
+	rs.env.Releases.Create(rel)
+	rs.env.KubeClient = newDeleteFailingKubeClient()
+
+	req := &services.UninstallReleaseRequest{
+		Name: "angry-panda",
+	}
+
+	_, err := rs.UninstallRelease(c, req)
+	if err == nil {
+		t.Fatalf("Expected failure to delete")
+	}
+	if !strings.Contains(err.Error(), "configmap-foo") {
+		t.Errorf("Expected delete error message to contain object name, got:" + err.Error())
 	}
 }

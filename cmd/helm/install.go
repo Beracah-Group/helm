@@ -32,6 +32,7 @@ import (
 	"github.com/ghodss/yaml"
 	"github.com/spf13/cobra"
 
+	"k8s.io/apimachinery/pkg/util/validation"
 	"k8s.io/helm/pkg/chartutil"
 	"k8s.io/helm/pkg/downloader"
 	"k8s.io/helm/pkg/getter"
@@ -130,11 +131,13 @@ type installCmd struct {
 	version        string
 	timeout        int64
 	wait           bool
+	atomic         bool
 	repoURL        string
 	username       string
 	password       string
 	devel          bool
 	depUp          bool
+	subNotes       bool
 	description    string
 
 	certFile string
@@ -167,7 +170,7 @@ func newInstallCmd(c helm.Interface, out io.Writer) *cobra.Command {
 
 	cmd := &cobra.Command{
 		Use:     "install [CHART]",
-		Short:   "install a chart archive",
+		Short:   "Install a chart archive",
 		Long:    installDesc,
 		PreRunE: func(_ *cobra.Command, _ []string) error { return setupConnection() },
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -188,37 +191,41 @@ func newInstallCmd(c helm.Interface, out io.Writer) *cobra.Command {
 			}
 			inst.chartPath = cp
 			inst.client = ensureHelmClient(inst.client)
+			inst.wait = inst.wait || inst.atomic
+
 			return inst.run()
 		},
 	}
 
 	f := cmd.Flags()
 	settings.AddFlagsTLS(f)
-	f.VarP(&inst.valueFiles, "values", "f", "specify values in a YAML file or a URL(can specify multiple)")
-	f.StringVarP(&inst.name, "name", "n", "", "release name. If unspecified, it will autogenerate one for you")
-	f.StringVar(&inst.namespace, "namespace", "", "namespace to install the release into. Defaults to the current kube config namespace.")
-	f.BoolVar(&inst.dryRun, "dry-run", false, "simulate an install")
-	f.BoolVar(&inst.disableHooks, "no-hooks", false, "prevent hooks from running during install")
-	f.BoolVar(&inst.disableCRDHook, "no-crd-hook", false, "prevent CRD hooks from running, but run other hooks")
-	f.BoolVar(&inst.replace, "replace", false, "re-use the given name, even if that name is already used. This is unsafe in production")
-	f.StringArrayVar(&inst.values, "set", []string{}, "set values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)")
-	f.StringArrayVar(&inst.stringValues, "set-string", []string{}, "set STRING values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)")
-	f.StringArrayVar(&inst.fileValues, "set-file", []string{}, "set values from respective files specified via the command line (can specify multiple or separate values with commas: key1=path1,key2=path2)")
-	f.StringVar(&inst.nameTemplate, "name-template", "", "specify template used to name the release")
-	f.BoolVar(&inst.verify, "verify", false, "verify the package before installing it")
-	f.StringVar(&inst.keyring, "keyring", defaultKeyring(), "location of public keys used for verification")
-	f.StringVar(&inst.version, "version", "", "specify the exact chart version to install. If this is not specified, the latest version is installed")
-	f.Int64Var(&inst.timeout, "timeout", 300, "time in seconds to wait for any individual Kubernetes operation (like Jobs for hooks)")
-	f.BoolVar(&inst.wait, "wait", false, "if set, will wait until all Pods, PVCs, Services, and minimum number of Pods of a Deployment are in a ready state before marking the release as successful. It will wait for as long as --timeout")
-	f.StringVar(&inst.repoURL, "repo", "", "chart repository url where to locate the requested chart")
-	f.StringVar(&inst.username, "username", "", "chart repository username where to locate the requested chart")
-	f.StringVar(&inst.password, "password", "", "chart repository password where to locate the requested chart")
-	f.StringVar(&inst.certFile, "cert-file", "", "identify HTTPS client using this SSL certificate file")
-	f.StringVar(&inst.keyFile, "key-file", "", "identify HTTPS client using this SSL key file")
-	f.StringVar(&inst.caFile, "ca-file", "", "verify certificates of HTTPS-enabled servers using this CA bundle")
-	f.BoolVar(&inst.devel, "devel", false, "use development versions, too. Equivalent to version '>0.0.0-0'. If --version is set, this is ignored.")
-	f.BoolVar(&inst.depUp, "dep-up", false, "run helm dependency update before installing the chart")
-	f.StringVar(&inst.description, "description", "", "specify a description for the release")
+	f.VarP(&inst.valueFiles, "values", "f", "Specify values in a YAML file or a URL(can specify multiple)")
+	f.StringVarP(&inst.name, "name", "n", "", "The release name. If unspecified, it will autogenerate one for you")
+	f.StringVar(&inst.namespace, "namespace", "", "Namespace to install the release into. Defaults to the current kube config namespace.")
+	f.BoolVar(&inst.dryRun, "dry-run", false, "Simulate an install")
+	f.BoolVar(&inst.disableHooks, "no-hooks", false, "Prevent hooks from running during install")
+	f.BoolVar(&inst.disableCRDHook, "no-crd-hook", false, "Prevent CRD hooks from running, but run other hooks")
+	f.BoolVar(&inst.replace, "replace", false, "Re-use the given name, even if that name is already used. This is unsafe in production")
+	f.StringArrayVar(&inst.values, "set", []string{}, "Set values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)")
+	f.StringArrayVar(&inst.stringValues, "set-string", []string{}, "Set STRING values on the command line (can specify multiple or separate values with commas: key1=val1,key2=val2)")
+	f.StringArrayVar(&inst.fileValues, "set-file", []string{}, "Set values from respective files specified via the command line (can specify multiple or separate values with commas: key1=path1,key2=path2)")
+	f.StringVar(&inst.nameTemplate, "name-template", "", "Specify template used to name the release")
+	f.BoolVar(&inst.verify, "verify", false, "Verify the package before installing it")
+	f.StringVar(&inst.keyring, "keyring", defaultKeyring(), "Location of public keys used for verification")
+	f.StringVar(&inst.version, "version", "", "Specify the exact chart version to install. If this is not specified, the latest version is installed")
+	f.Int64Var(&inst.timeout, "timeout", 300, "Time in seconds to wait for any individual Kubernetes operation (like Jobs for hooks)")
+	f.BoolVar(&inst.wait, "wait", false, "If set, will wait until all Pods, PVCs, Services, and minimum number of Pods of a Deployment are in a ready state before marking the release as successful. It will wait for as long as --timeout")
+	f.BoolVar(&inst.atomic, "atomic", false, "If set, installation process purges chart on fail, also sets --wait flag")
+	f.StringVar(&inst.repoURL, "repo", "", "Chart repository url where to locate the requested chart")
+	f.StringVar(&inst.username, "username", "", "Chart repository username where to locate the requested chart")
+	f.StringVar(&inst.password, "password", "", "Chart repository password where to locate the requested chart")
+	f.StringVar(&inst.certFile, "cert-file", "", "Identify HTTPS client using this SSL certificate file")
+	f.StringVar(&inst.keyFile, "key-file", "", "Identify HTTPS client using this SSL key file")
+	f.StringVar(&inst.caFile, "ca-file", "", "Verify certificates of HTTPS-enabled servers using this CA bundle")
+	f.BoolVar(&inst.devel, "devel", false, "Use development versions, too. Equivalent to version '>0.0.0-0'. If --version is set, this is ignored.")
+	f.BoolVar(&inst.depUp, "dep-up", false, "Run helm dependency update before installing the chart")
+	f.BoolVar(&inst.subNotes, "render-subchart-notes", false, "Render subchart notes along with the parent")
+	f.StringVar(&inst.description, "description", "", "Specify a description for the release")
 
 	// set defaults from environment
 	settings.InitTLS(f)
@@ -246,6 +253,10 @@ func (i *installCmd) run() error {
 		}
 		// Print the final name so the user knows what the final name of the release is.
 		fmt.Printf("FINAL NAME: %s\n", i.name)
+	}
+
+	if msgs := validation.IsDNS1123Subdomain(i.name); i.name != "" && len(msgs) > 0 {
+		return fmt.Errorf("release name %s is invalid: %s", i.name, strings.Join(msgs, ";"))
 	}
 
 	// Check chart requirements to make sure all dependencies are present in /charts
@@ -295,10 +306,28 @@ func (i *installCmd) run() error {
 		helm.InstallReuseName(i.replace),
 		helm.InstallDisableHooks(i.disableHooks),
 		helm.InstallDisableCRDHook(i.disableCRDHook),
+		helm.InstallSubNotes(i.subNotes),
 		helm.InstallTimeout(i.timeout),
 		helm.InstallWait(i.wait),
 		helm.InstallDescription(i.description))
 	if err != nil {
+		if i.atomic {
+			fmt.Fprintf(os.Stdout, "INSTALL FAILED\nPURGING CHART\nError: %v\n", prettyError(err))
+			deleteSideEffects := &deleteCmd{
+				name:         i.name,
+				disableHooks: i.disableHooks,
+				purge:        true,
+				timeout:      i.timeout,
+				description:  "",
+				dryRun:       i.dryRun,
+				out:          i.out,
+				client:       i.client,
+			}
+			if err := deleteSideEffects.run(); err != nil {
+				return err
+			}
+			fmt.Fprintf(os.Stdout, "Successfully purged a chart!\n")
+		}
 		return prettyError(err)
 	}
 
